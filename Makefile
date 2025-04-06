@@ -1,29 +1,44 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -I$(HOME)/lib/include
-LDFLAGS = -L$(HOME)/lib/lib
+# === Configuration ===
+NAME    = common_types
+PREFIX  ?= /usr/local
 
-# Library name (match directory name)
-LIBNAME = common_types
+# === Derived ===
+SRC     = $(NAME).c
+HDR     = $(NAME).h
+OBJ     = $(NAME).o
 
-# Source files
-SRCS = $(LIBNAME).c
-OBJS = $(SRCS:.c=.o)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    LIBEXT = dylib
+else
+    LIBEXT = so
+endif
 
-# Targets
-all: lib$(LIBNAME).a
+TARGET = lib$(NAME).$(LIBEXT)
+CFLAGS  = -Wall -fPIC
+LDFLAGS = -shared
 
-lib$(LIBNAME).a: $(OBJS)
-	ar rcs $@ $^
+# === Rules ===
+.PHONY: all clean install uninstall
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+all: $(TARGET)
 
-install:
-	mkdir -p $(HOME)/lib/include/$(LIBNAME)
-	cp $(LIBNAME).h $(HOME)/lib/include/$(LIBNAME)/
-	cp lib$(LIBNAME).a $(HOME)/lib/lib/
+$(TARGET): $(OBJ)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+$(OBJ): $(SRC) $(HDR)
+	$(CC) $(CFLAGS) -c $(SRC) -o $(OBJ)
+
+install: $(TARGET)
+	install -d $(PREFIX)/lib
+	install -d $(PREFIX)/include
+	install -m 644 $(TARGET) $(PREFIX)/lib/
+	install -m 644 $(HDR) $(PREFIX)/include/
+
+uninstall:
+	rm -f $(PREFIX)/lib/$(TARGET)
+	rm -f $(PREFIX)/include/$(HDR)
 
 clean:
-	rm -f *.o *.a
+	rm -f $(OBJ) $(TARGET)
 
-.PHONY: all install clean
